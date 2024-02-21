@@ -10,7 +10,7 @@ Inspired from https://github.com/jimmywarting/StreamSaver.js
 function StreamSave(options) {
     // default options
     this.options = options || {};
-    this.options.baseUrl = this.options.baseUrl || location.origin;
+    this.options.baseUrl = this.options.baseUrl || (location.origin + location.pathname);
     this.options.serviceWorker = this.options.serviceWorker || "./streamSaveServiceWorker.js";
 
     // trigger prompt to save a file and return a stream to write data to that file
