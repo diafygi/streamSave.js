@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- disable favicon request -->
+    <title>StreamSave.js Demo</title>
+  </head>
+  <body>
+    <p>
+        This is an demo of
+        <a href="https://github.com/diafygi/streamSave.js">https://github.com/diafygi/streamSave.js</a>
+    </p>
+    <button id="download">Download 20 bytes every 1 second for 10 seconds (200 bytes)</button>
+    <script src="./streamSave.js"></script>
+    <script>
+      // Firefox private mode douesn't support service workers yet...
+      if (!navigator.serviceWorker) {
+        document.write(`<div style='color:red;'>
+            ServiceWorkers are not supported in your browser, so this won't work :(
+        </div>`)
+      }
+
+      const numChunks = 10;
+      const chunk = new Uint8Array(Array(20).fill(97)); // 97 (20 times) == "aaaaaaaaaaaaaaaaaaaa"
+
+      document.getElementById("download").onclick = async () => {
+        const writer = await (new StreamSave()).promptSave("sample.txt", numChunks * chunk.length);
+        for (const i of [...Array(numChunks).keys()]) {
+          writer.write(chunk);
+          i === (numChunks - 1) ? writer.close() : await new Promise(rs => setTimeout(rs, 1000));
+        }
+      };
+    </script>
+  </body>
+</html>
