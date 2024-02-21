@@ -38,8 +38,8 @@ function StreamSave(options) {
         }
 
         // register the service worker to listen and MITM download requests
-        const swReg = await navigator.serviceWorker.getRegistration(this.options.baseUrl) ||
-            await navigator.serviceWorker.register(this.options.serviceWorker, { scope: this.options.baseUrl });
+        const swReg = await navigator.serviceWorker.getRegistration("./") ||
+            await navigator.serviceWorker.register(this.options.serviceWorker, { scope: "./" });
         if (swReg.installing)
             await new Promise((r) => { swReg.installing.onstatechange = e => { if (e.target.state === "activated") r() } });
         swReg.active.postMessage({}, [ channel.port2 ]);
