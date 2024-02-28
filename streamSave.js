@@ -44,8 +44,13 @@ function StreamSave(options) {
             await new Promise((r) => { swReg.installing.onstatechange = e => { if (e.target.state === "activated") r() } });
         swReg.active.postMessage({}, [ channel.port2 ]);
 
+        // keep service worker alive to keep the TransformStream open while the writer is open
+        const ping = setInterval(() => { swReg.active.postMessage({ping: true}); }, 1000);
+        const writer = ts.writable.getWriter();
+        writer.closed.then(() => { clearInterval(ping); });
+
         // return stream that can be pushed data to the download
-        return ts.writable.getWriter();
+        return writer;
     }
 }
 

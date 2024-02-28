@@ -9,6 +9,7 @@ const MAP = new Map();
 
 // set url to intercept and data stream to use for feeding the response
 self.onmessage = evt => {
+    if (evt.data.ping) { return null; }
     const port = evt.ports[0];
     port.onmessage = e => {
         MAP.set(e.data.url, e.data);
