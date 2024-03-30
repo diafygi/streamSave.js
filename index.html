@@ -56,7 +56,7 @@
             document.getElementById("vid-wrapper").innerHTML = "Fetching video for demo...";
 
             // load video
-            const FULL_VIDEO = await (await fetch("./demo_files/BigBuckBunny_320x180.mp4")).arrayBuffer();
+            const FULL_VIDEO = await (await fetch("./demo_files/trailer_400p.mp4")).arrayBuffer();
             const VIDEO_SIZE = FULL_VIDEO.byteLength;
 
             // handle video loading requests using Range headers
