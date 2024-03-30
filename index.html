@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- disable favicon request -->
     <title>StreamSave.js Demo</title>
+    <script src="./streamSave.js"></script>
   </head>
   <body>
+
     <p>
         This is an demo of
         <a href="https://github.com/diafygi/streamSave.js">https://github.com/diafygi/streamSave.js</a>
     </p>
-    <button id="download">Download 20 bytes every 1 second for 10 seconds (200 bytes)</button>
-    <script src="./streamSave.js"></script>
     <script>
       // Firefox private mode douesn't support service workers yet...
       if (!navigator.serviceWorker) {
@@ -19,17 +19,95 @@
             ServiceWorkers are not supported in your browser, so this won't work :(
         </div>`)
       }
-
-      const numChunks = 10;
-      const chunk = new Uint8Array(Array(20).fill(97)); // 97 (20 times) == "aaaaaaaaaaaaaaaaaaaa"
-
-      document.getElementById("download").onclick = async () => {
-        const writer = await (new StreamSave()).promptSave("sample.txt", numChunks * chunk.length);
-        for (const i of [...Array(numChunks).keys()]) {
-          writer.write(chunk);
-          i === (numChunks - 1) ? writer.close() : await new Promise(rs => setTimeout(rs, 1000));
-        }
-      };
     </script>
+
+    <!------------------------>
+    <!-- Chunk dowload demo -->
+    <!------------------------>
+    <div>
+        <button id="download">Download 20 bytes every 1 second for 10 seconds (200 bytes)</button>
+    </div>
+    <script>
+        const numChunks = 10;
+        const chunk = new Uint8Array(Array(20).fill(97)); // 97 (20 times) == "aaaaaaaaaaaaaaaaaaaa"
+        const headers = {"Content-Length": (numChunks * chunk.length).toString()};
+
+        document.getElementById("download").onclick = async () => {
+            const [url, writer] = await promptSave("sample.txt", (numChunks * chunk.length));
+            for (const i of [...Array(numChunks).keys()]) {
+                writer.write(chunk);
+                i === (numChunks - 1) ? writer.close() : await new Promise(rs => setTimeout(rs, 1000));
+            }
+            writer.close();
+        };
+    </script>
+
+    <!----------------------->
+    <!-- Video player demo -->
+    <!----------------------->
+    <div style="margin-top:1em;">
+        <button id="play">Play a video using Range headers</button>
+        <div id="vid-wrapper" style="margin-top:1em;"></div>
+    </div>
+    <script>
+        document.getElementById("play").onclick = async () => {
+            let FULL_VIDEO = undefined;
+            let VIDEO_SIZE = undefined;
+
+            // clear any previously loaded videos
+            document.getElementById("vid-wrapper").innerHTML = "";
+
+            // handle video loading requests using Range headers
+            async function vidRequestHandler(reqData) {
+
+                // get range start requested by the video player
+                let rangeStart = 0;
+                const rangeMatch = (reqData.requestHeaders.range || "").match(/^bytes=([0-9]+)-$/);
+                if (rangeMatch !== null) {
+                    rangeStart = parseInt(rangeMatch[1]);
+                }
+
+                // fetch the whole video
+                // (you could request only the range you want if your server supports Range headers)
+                if (FULL_VIDEO === undefined) {
+                    FULL_VIDEO = await (await fetch("./demo_files/BigBuckBunny_320x180.mp4")).arrayBuffer();
+                    VIDEO_SIZE = FULL_VIDEO.byteLength;
+                }
+
+                // set end of range to 1 MB max
+                let rangeEnd = rangeStart + (1 * 1000 * 1000) - 1;
+                if (rangeEnd >= VIDEO_SIZE) {
+                    rangeEnd = VIDEO_SIZE - 1;
+                }
+
+                // extract the range desired
+                const rangeSlice = FULL_VIDEO.slice(rangeStart, rangeEnd + 1);
+
+                // send the headers and TransformStream back to the service worker so it can
+                // start responding to the intercepted request
+                return {
+                    status: 206,
+                    statusText: "Partial Content",
+                    headers: {
+                        "Content-Type": "video/mp4",
+                        "Content-Length": (rangeEnd - rangeStart + 1).toString(),
+                        "Content-Range": `bytes ${rangeStart}-${rangeEnd}/${VIDEO_SIZE}`,
+                    },
+                    data: rangeSlice,
+                };
+            }
+
+            // create url that will use a service worker to intercept the video source
+            // request, and redirect the request to the client request handler
+            const vidInterceptUrl = await createInterceptUrl(vidRequestHandler);
+
+            // create a video element with the intercept url as the video's source
+            const vid = document.createElement("video");
+            vid.src = vidInterceptUrl;
+            vid.setAttribute("controls", null);
+            document.getElementById("vid-wrapper").appendChild(vid);
+        };
+    </script>
+
   </body>
 </html>
