@@ -1,15 +1,17 @@
 // Copyright Daniel Roesler. Released under The MIT License
+const thisStreamSaveScriptSrc = document.currentScript.src;
 
 // Allows for streaming responses to urls from the client-side
 async function createInterceptUrl(requestHandler, serviceWorkerUrl, baseUrl) {
 
     // default options
-    serviceWorkerUrl = serviceWorkerUrl || "./streamSaveServiceWorker.js";
-    baseUrl = baseUrl || (location.origin + location.pathname);
+    const basePath = (new URL(thisStreamSaveScriptSrc)).pathname.split("/").slice(0, -1).join("/") + "/";
+    serviceWorkerUrl = serviceWorkerUrl || basePath + "streamSaveServiceWorker.js";
+    baseUrl = baseUrl || (location.origin + basePath);
 
     // register the service worker and wait for it to become active
-    const swReg = await navigator.serviceWorker.getRegistration("./") ||
-        await navigator.serviceWorker.register(serviceWorkerUrl, { scope: "./" });
+    const swReg = await navigator.serviceWorker.getRegistration(basePath) ||
+        await navigator.serviceWorker.register(serviceWorkerUrl, { scope: basePath });
     if (swReg.installing) {
         await new Promise((r) => { let i = setInterval(() => { if (swReg.active) { clearInterval(i); r(); }}, 10);});
     }
